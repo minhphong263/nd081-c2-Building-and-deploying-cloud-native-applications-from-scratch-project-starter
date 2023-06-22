@@ -1,0 +1,195 @@
+data:
+  FUNCTIONS_WORKER_RUNTIME: cHl0aG9u
+apiVersion: v1
+kind: Secret
+metadata:
+  name: phopngvm
+---
+data:
+  host.master: eHZfMnUzejdxVENzUE9VMEJhbzZEbHg3ajRXQVVRWERUOS1CbzhlajFFTnRBekZ1ZHJZV3pnPT0=
+  host.function.default: ZjhsU2ZNVk1HYmFSWUR3aVdXMmtTSzhwZ2F2Zmw4ZEJUVFk1LThlRFlyU3NBekZ1ZS1hdl9BPT0=
+  host.systemKey.default: TWEzUkFSNDhCanJBVUFLODV6Y09iVU5FNUNHb0VsYjk5eEtzUngzQzc2cGZBekZ1cllIRGlnPT0=
+  functions.deleteadvertisement.default: X19wODQwRFIzVms4NDMtU3dFSjNWYjF0Q0FEVDRFa2tzcFlERVJ0dXZLMk1BekZ1Q2ZGQ1JnPT0=
+  functions.getpost.default: UXlkV1RZNmhaUzJmelk4QU1wV3l5OERZWlVTZkt3ZEZHY2ZrclpoLVhQeGNBekZ1OXZmYk13PT0=
+  functions.getadvertisement.default: aXNRcTFiWVRvXy1tZ1N2eUM2NF9uWkRYQW5KQnRQY0E1d3VSdGlQU3lZcG5BekZ1RFNDVzlRPT0=
+  functions.createadvertisement.default: U3QzMk5iTHpoeUltZW1wc0hPQkZyMlZ1SElvaWp5UjNnYnZKNUNzUGxrOGxBekZ1M1JiamJnPT0=
+  functions.getadvertisements.default: eEhWUTd1VnAyMHVIeF8yY2VMRjN4clBZWmQ1LU5MeHdQbXNfZjYyVXBmR1BBekZ1cmR2VW53PT0=
+  functions.updateadvertisement.default: R0dRdEd6b3dtZzR0bHRrVk5OSDBKQ1IyNTUtc1VtMGd5OTQ0ckNGV3czSWtBekZ1RGNoazZBPT0=
+  functions.getposts.default: M1YtSHYzcFplZklSY0ZtVnJ6RkZWQUZfcjVoWDFQN2tMZDUtRXZvenBsSmpBekZ1SkR6cTB3PT0=
+apiVersion: v1
+kind: Secret
+metadata:
+  name: func-keys-kube-secret-phopngvm
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: phopngvm-function-keys-identity-svc-act
+---
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  - configMaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: functions-keys-manager-role
+---
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: functions-keys-manager-role
+subjects:
+- kind: ServiceAccount
+  name: phopngvm-function-keys-identity-svc-act
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: phopngvm-function-keys-identity-svc-act-functions-keys-manager-rolebinding
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phopngvm-http
+spec:
+  selector:
+    app: phopngvm-http
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phopngvm-http
+  labels:
+    app: phopngvm-http
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phopngvm-http
+  template:
+    metadata:
+      labels:
+        app: phopngvm-http
+    spec:
+      containers:
+      - name: phopngvm-http
+        image: phongvm/phopngvm:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: AzureFunctionsJobHost__functions__0
+          value: deleteAdvertisement
+        - name: AzureFunctionsJobHost__functions__1
+          value: getPost
+        - name: AzureFunctionsJobHost__functions__2
+          value: getAdvertisement
+        - name: AzureFunctionsJobHost__functions__3
+          value: createAdvertisement
+        - name: AzureFunctionsJobHost__functions__4
+          value: getAdvertisements
+        - name: AzureFunctionsJobHost__functions__5
+          value: updateAdvertisement
+        - name: AzureFunctionsJobHost__functions__6
+          value: getPosts
+        - name: AzureWebJobsSecretStorageType
+          value: kubernetes
+        - name: AzureWebJobsKubernetesSecretName
+          value: secrets/func-keys-kube-secret-phopngvm
+        envFrom:
+        - secretRef:
+            name: phopngvm
+        readinessProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 240
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+        startupProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 240
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+      serviceAccountName: phopngvm-function-keys-identity-svc-act
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phopngvm
+  labels:
+    app: phopngvm
+spec:
+  selector:
+    matchLabels:
+      app: phopngvm
+  template:
+    metadata:
+      labels:
+        app: phopngvm
+    spec:
+      containers:
+      - name: phopngvm
+        image: phongvm/phopngvm:latest
+        env:
+        - name: AzureFunctionsJobHost__functions__0
+          value: eventHubTrigger
+        envFrom:
+        - secretRef:
+            name: phopngvm
+        readinessProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 240
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+        startupProbe:
+          failureThreshold: 3
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 240
+          httpGet:
+            path: /
+            port: 80
+            scheme: HTTP
+      serviceAccountName: phopngvm-function-keys-identity-svc-act
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: phopngvm
+  labels: {}
+spec:
+  scaleTargetRef:
+    name: phopngvm
+  triggers:
+  - type: azure-eventhub
+    metadata:
+      direction: in
+      eventHubName: phongvmhub
+      connectionFromEnv: Endpoint=sb://phongvm.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=5z3tds1gtlrvu45iW7PkDixnN/9Tl85GL+AEhNVckZI=;EntityPath=phongvmhub
+---
+
