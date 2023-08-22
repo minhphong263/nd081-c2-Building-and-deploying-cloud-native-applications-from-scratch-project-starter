@@ -55,6 +55,6 @@ jobs:
         uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
-          app-name: 'phongvmweb'
+          app-name: 'phongvm'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_4FCF7AAE73D94715BCA2EAB775E9ECCE }}
